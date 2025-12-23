@@ -52,18 +52,24 @@ class _RobotControlScreenState extends State<RobotControlScreen> {
           onWebResourceError: (WebResourceError error) {},
         ),
       );
+    _controller.clearCache(); // Force clear cache on load
+    _controller.clearLocalStorage();
   }
 
-  void _connect() {
+  void _connect() async {
     String ip = _ipController.text.trim();
     if (ip.isEmpty) return;
     
     if (!ip.startsWith('http')) {
       ip = 'http://$ip';
     }
-    if (!ip.endsWith(':5000')) {
+    if (!ip.endsWith(':5000') && !ip.contains('ngrok') && !ip.contains('serveo')) {
+       // Only add port if it's an IP address, not a tunnel URL
       ip = '$ip:5000';
     }
+
+    // Clear cache again before new connection to be safe
+    await _controller.clearCache();
 
     setState(() {
       _currentUrl = ip;
