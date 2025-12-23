@@ -23,11 +23,15 @@ jobs:
           cp flutter_app/lib/main.dart build_env/lib/main.dart
           cp flutter_app/pubspec.yaml build_env/pubspec.yaml
 
-      - name: Allow HTTP Traffic (Cleartext)
+      - name: Allow HTTP Traffic (Cleartext) & Permissions
         working-directory: ./build_env
         run: |
           # Inject usesCleartextTraffic="true" into the <application> tag
           sed -i 's/<application/<application android:usesCleartextTraffic="true"/g' android/app/src/main/AndroidManifest.xml
+          
+          # Inject Permissions before <application> tag
+          sed -i 's/<application/<uses-permission android:name="android.permission.INTERNET"\/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"\/>\n    <application/g' android/app/src/main/AndroidManifest.xml
+          
           cat android/app/src/main/AndroidManifest.xml # Verify the change in logs
 
       - name: Build APK
