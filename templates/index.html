@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot Control Center</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-color: #1e1e1e;
+            --text-color: #e0e0e0;
+            --accent-color: #00bcd4;
+            --btn-color: #333;
+            --btn-active: #555;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            width: 100%;
+            background-color: var(--card-color);
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--accent-color);
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2rem;
+            padding: 2rem;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .video-container {
+            width: 100%;
+            max-width: 640px;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid var(--card-color);
+            aspect-ratio: 4/3;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .video-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .controls-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3rem;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .control-group {
+            background-color: var(--card-color);
+            padding: 1.5rem;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .label {
+            font-weight: bold;
+            color: var(--accent-color);
+            margin-bottom: 0.5rem;
+        }
+
+        /* D-Pad Styles */
+        .d-pad {
+            display: grid;
+            grid-template-columns: repeat(3, 60px);
+            grid-template-rows: repeat(3, 60px);
+            gap: 5px;
+        }
+
+        .btn {
+            background-color: var(--btn-color);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .btn:active,
+        .btn.active {
+            background-color: var(--accent-color);
+            transform: scale(0.95);
+            color: #000;
+        }
+
+        .btn-up {
+            grid-column: 2;
+            grid-row: 1;
+        }
+
+        .btn-left {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        .btn-stop {
+            grid-column: 2;
+            grid-row: 2;
+            background-color: #d32f2f;
+            font-size: 1rem;
+        }
+
+        .btn-right {
+            grid-column: 3;
+            grid-row: 2;
+        }
+
+        .btn-down {
+            grid-column: 2;
+            grid-row: 3;
+        }
+
+        /* Servo Slider */
+        .slider-container {
+            width: 250px;
+            text-align: center;
+        }
+
+        input[type=range] {
+            width: 100%;
+            margin: 10px 0;
+            -webkit-appearance: none;
+            background: transparent;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            cursor: pointer;
+            margin-top: -8px;
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #555;
+            border-radius: 2px;
+        }
+
+        .status-log {
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: #888;
+            margin-top: 1rem;
+            min-height: 1.2em;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Antigravity Robot Control</h1>
+    </header>
+
+    <div class="container">
+
+        <div class="video-container">
+            <img src="/video_feed" alt="Video Feed">
+        </div>
+
+        <div class="controls-wrapper">
+
+            <!-- Motor Controls -->
+            <div class="control-group">
+                <div class="label">MOVEMENT</div>
+                <div class="d-pad">
+                    <button class="btn btn-up" id="btn-up" data-dir="forward">▲</button>
+                    <button class="btn btn-left" id="btn-left" data-dir="left">◀</button>
+                    <button class="btn btn-stop" id="btn-stop" data-dir="stop">STOP</button>
+                    <button class="btn btn-right" id="btn-right" data-dir="right">▶</button>
+                    <button class="btn btn-down" id="btn-down" data-dir="backward">▼</button>
+                </div>
+                <div class="slider-container" style="margin-top: 1rem;">
+                    <label for="speed">Speed: <span id="speed-val">50</span>%</label>
+                    <input type="range" id="speed" min="0" max="100" value="50">
+                    <div style="display: flex; gap: 5px; justify-content: center; margin-top: 5px;">
+                        <button class="btn" style="font-size: 0.8rem; padding: 5px 10px;"
+                            onclick="setSpeed(25)">25%</button>
+                        <button class="btn" style="font-size: 0.8rem; padding: 5px 10px;"
+                            onclick="setSpeed(50)">50%</button>
+                        <button class="btn" style="font-size: 0.8rem; padding: 5px 10px;"
+                            onclick="setSpeed(75)">75%</button>
+                        <button class="btn" style="font-size: 0.8rem; padding: 5px 10px;"
+                            onclick="setSpeed(100)">100%</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Camera Controls -->
+            <div class="control-group">
+                <div class="label">CAMERA PAN</div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn" style="width: 60px; height: 40px; font-size: 1rem;"
+                        onclick="setPan(0)">Left</button>
+                    <button class="btn" style="width: 60px; height: 40px; font-size: 1rem;"
+                        onclick="setPan(90)">Center</button>
+                    <button class="btn" style="width: 60px; height: 40px; font-size: 1rem;"
+                        onclick="setPan(180)">Right</button>
+                </div>
+                <div>Angle: <span id="pan-val">90</span>°</div>
+            </div>
+
+            <!-- Telemetry Dashboard -->
+            <div class="control-group" style="width: 100%; max-width: 640px; align-items: flex-start;">
+                <div class="label" style="align-self: center;">SENSOR TELEMETRY</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; width: 100%;">
+
+                    <!-- GPS -->
+                    <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;">
+                        <div style="color: #aaa; font-size: 0.8rem;">GPS</div>
+                        <div id="gps-lat">Lat: --</div>
+                        <div id="gps-lon">Lon: --</div>
+                    </div>
+
+                    <!-- IMU -->
+                    <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;">
+                        <div style="color: #aaa; font-size: 0.8rem;">IMU (ACCEL)</div>
+                        <div id="imu-acc">X: -- Y: -- Z: --</div>
+                    </div>
+
+                    <!-- Encoders -->
+                    <div
+                        style="grid-column: span 2; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;">
+                        <div style="color: #aaa; font-size: 0.8rem;">ENCODERS (cm)</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-size: 0.9rem;">
+                            <div id="enc-fl">FL: --</div>
+                            <div id="enc-fr">FR: --</div>
+                            <div id="enc-bl">BL: --</div>
+                            <div id="enc-br">BR: --</div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+        <div class="status-log" id="status">Ready</div>
+
+    </div>
+
+    <script>
+        const statusEl = document.getElementById('status');
+        const speedInput = document.getElementById('speed');
+        const panInput = document.getElementById('pan');
+
+        // --- Telemetry Polling ---
+        setInterval(() => {
+            fetch('/telemetry')
+                .then(res => res.json())
+                .then(data => {
+                    // Update GPS
+                    document.getElementById('gps-lat').innerText = `Lat: ${data.gps.latitude}`;
+                    document.getElementById('gps-lon').innerText = `Lon: ${data.gps.longitude}`;
+
+                    // Update IMU
+                    const acc = data.mpu;
+                    document.getElementById('imu-acc').innerText = `X: ${acc.accelX} Y: ${acc.accelY} Z: ${acc.accelZ}`;
+
+                    // Update Encoders
+                    const enc = data.encoders;
+                    document.getElementById('enc-fl').innerText = `FL: ${enc.front_left.distance_cm}`;
+                    document.getElementById('enc-fr').innerText = `FR: ${enc.front_right.distance_cm}`;
+                    document.getElementById('enc-bl').innerText = `BL: ${enc.back_left.distance_cm}`;
+                    document.getElementById('enc-br').innerText = `BR: ${enc.back_right.distance_cm}`;
+                })
+                .catch(err => console.log("Telemetry Error:", err));
+        }, 1000);
+
+        // --- Motor Control ---
+        function sendMotorCommand(direction) {
+            const speed = parseInt(speedInput.value);
+            statusEl.innerText = `Motor: ${direction} at ${speed}%`;
+
+            fetch('/control_motor', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ direction: direction, speed: speed })
+            }).catch(err => console.error(err));
+        }
+
+        // Button Events
+        document.querySelectorAll('.btn[data-dir]').forEach(btn => {
+            // Mouse/Touch Down
+            btn.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                sendMotorCommand(btn.dataset.dir);
+                btn.classList.add('active');
+            });
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                sendMotorCommand(btn.dataset.dir);
+                btn.classList.add('active');
+            });
+
+            // Mouse/Touch Up (Stop on release typically desirable for RC, or just latch?)
+            // For simple web control, usually hold-to-move is safer.
+            const stop = (e) => {
+                if (btn.classList.contains('active')) {
+                    e.preventDefault();
+                    sendMotorCommand('stop');
+                    btn.classList.remove('active');
+                }
+            };
+
+            btn.addEventListener('mouseup', stop);
+            btn.addEventListener('mouseleave', stop);
+            btn.addEventListener('touchend', stop);
+        });
+
+        // Speed Slider Update
+        speedInput.addEventListener('input', (e) => {
+            document.getElementById('speed-val').innerText = e.target.value;
+        });
+
+        function setSpeed(val) {
+            speedInput.value = val;
+            document.getElementById('speed-val').innerText = val;
+        }
+
+        // Keyboard Controls
+        document.addEventListener('keydown', (e) => {
+            if (e.repeat) return;
+            switch (e.key) {
+                case 'ArrowUp': case 'w':
+                    document.getElementById('btn-up').classList.add('active');
+                    sendMotorCommand('forward'); break;
+                case 'ArrowDown': case 's':
+                    document.getElementById('btn-down').classList.add('active');
+                    sendMotorCommand('backward'); break;
+                case 'ArrowLeft': case 'a':
+                    document.getElementById('btn-left').classList.add('active');
+                    sendMotorCommand('left'); break;
+                case 'ArrowRight': case 'd':
+                    document.getElementById('btn-right').classList.add('active');
+                    sendMotorCommand('right'); break;
+                case ' ':
+                    document.getElementById('btn-stop').click(); break;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            switch (e.key) {
+                case 'ArrowUp': case 'w':
+                    document.getElementById('btn-up').classList.remove('active');
+                    sendMotorCommand('stop'); break;
+                case 'ArrowDown': case 's':
+                    document.getElementById('btn-down').classList.remove('active');
+                    sendMotorCommand('stop'); break;
+                case 'ArrowLeft': case 'a':
+                    document.getElementById('btn-left').classList.remove('active');
+                    sendMotorCommand('stop'); break;
+                case 'ArrowRight': case 'd':
+                    document.getElementById('btn-right').classList.remove('active');
+                    sendMotorCommand('stop'); break;
+            }
+        });
+
+
+        // --- Servo Control ---
+        function setPan(angle) {
+            document.getElementById('pan-val').innerText = angle;
+            fetch('/control_servo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ angle: angle })
+            }).catch(err => console.error(err));
+        }
+
+    </script>
+</body>
+
+</html>

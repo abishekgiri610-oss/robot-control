@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agricultural Rover</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #eef2f3;
+      margin: 0; padding: 20px;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    h1 {
+      color: #2e7d32;
+      margin-bottom: 20px;
+      width: 100%;
+      text-align: center;
+      font-size: 2rem;
+    }
+    .tabs {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+      max-width: 1200px;
+      margin-bottom: 20px;
+    }
+    .tab {
+      padding: 15px 25px;
+      margin: 0 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      background-color: #f1f1f1;
+      transition: background-color 0.3s;
+    }
+    .tab:hover {
+      background-color: #ddd;
+    }
+    .active-tab {
+      background-color: #4caf50;
+      color: white;
+    }
+    .tab-content {
+      display: none;
+      width: 100%;
+      max-width: 1200px;
+    }
+    .active-content {
+      display: block;
+    }
+    .main-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-evenly;
+      align-items: center;
+      width: 100%;
+      margin-bottom: 40px;
+    }
+    #camera-window {
+      width: 960px;
+      max-width: 100%;
+      height: auto;
+      background-color: black;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    #camera-feed, #camera-feed-autonomous {
+      width: 960px;
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+    #joystick-container {
+      width: 250px;
+      height: 250px;
+      background: white;
+      border-radius: 50%;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      margin: 20px auto;
+      position: relative;
+    }
+    .slider-wrapper {
+      max-width: 600px;
+      margin: 0 auto 30px;
+    }
+    .slider-container {
+      display: grid;
+      grid-template-columns: 120px 1fr 50px;
+      align-items: center;
+      gap: 10px;
+      margin: 15px 0;
+    }
+    input[type=range] {
+      width: 100%;
+    }
+    label {
+      font-weight: bold;
+      color: #333;
+    }
+    span {
+      font-family: monospace;
+    }
+    .status {
+      text-align: center;
+      max-width: 1200px;
+      width: 100%;
+    }
+    .status > div {
+      margin-bottom: 15px;
+    }
+    .status h3 {
+      margin-bottom: 10px;
+    }
+    .button {
+      background-color: #ff4d4d;
+      color: white;
+      padding: 15px 25px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1.2rem;
+      max-width: 250px;
+      width: 100%;
+      margin: 10px auto;
+      display: block;
+      transition: background-color 0.3s;
+    }
+    .button:hover {
+      background-color: #e60000;
+    }
+    .start-button {
+  	background-color: #4CAF50; /* green */
+ 	color: white;
+  	font-size: 1.2rem;
+  	padding: 15px 25px;
+  	border: none;
+  	border-radius: 5px;
+  	cursor: pointer;
+ 	max-width: 250px;
+  	width: 100%;
+ 	margin: 10px auto;
+ 	display: block;
+  	transition: background-color 0.3s;
+	}
+
+     .start-button:hover {
+  	background-color: #388E3C; /* darker green on hover */
+	}
+    #map {
+      height: 400px;
+      width: 960px;
+      max-width: 100%;
+      margin-top: 20px;
+      border-radius: 10px;
+    }
+    @media (max-width: 768px) {
+      #camera-window, #camera-feed, #camera-feed-autonomous, #map {
+        width: 100%;
+        height: auto;
+      }
+      #joystick-container {
+        width: 200px;
+        height: 200px;
+      }
+      .slider-container {
+        grid-template-columns: 100px 1fr 50px;
+      }
+      .button {
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<h1>Agricultural Rover</h1>
+
+<div class="tabs">
+  <div id="manual-tab" class="tab active-tab" onclick="switchTab('manual')">Manual Operation</div>
+  <div id="autonomous-tab" class="tab" onclick="switchTab('autonomous')">Autonomous Mode</div>
+</div>
+
+<div id="manual" class="tab-content active-content">
+  <div class="main-container">
+    <div id="camera-window">
+      <img id="camera-feed" src="{{ url_for('video_feed') }}" alt="Camera feed" />
+    </div>
+    <div id="joystick-container"></div>
+  </div>
+
+  <div class="slider-wrapper">
+    <div class="slider-container">
+      <label for="front_left">Front Left</label>
+      <input type="range" id="front_left" min="0" max="100" value="80" onchange="updateSpeed('front_left', this.value)">
+      <span id="front_left_val">80%</span>
+    </div>
+    <div class="slider-container">
+      <label for="front_right">Front Right</label>
+      <input type="range" id="front_right" min="0" max="100" value="80" onchange="updateSpeed('front_right', this.value)">
+      <span id="front_right_val">80%</span>
+    </div>
+    <div class="slider-container">
+      <label for="back_left">Back Left</label>
+      <input type="range" id="back_left" min="0" max="100" value="80" onchange="updateSpeed('back_left', this.value)">
+      <span id="back_left_val">80%</span>
+    </div>
+    <div class="slider-container">
+      <label for="back_right">Back Right</label>
+      <input type="range" id="back_right" min="0" max="100" value="80" onchange="updateSpeed('back_right', this.value)">
+      <span id="back_right_val">80%</span>
+    </div>
+  </div>
+	<button onclick="rotateServo(-90)">Rotate Left</button>
+	<button onclick="rotateServo(0)">Center</button>
+	<button onclick="rotateServo(90)">Rotate Right</button>
+
+  <div class="status">
+    <h3>Sensor Data</h3>
+    <div>
+      <h4>MPU6050 Data:</h4>
+      <p id="mpu6050-data">Accelerometer &amp; Gyroscope: Loading...</p>
+    </div>
+    <div>
+      <h4>GPS Data:</h4>
+      <p id="gps-data">Latitude: Loading... | Longitude: Loading...</p>
+    </div>
+    <div>
+      <h4>Encoder Counts:</h4>
+      <p id="encoder-counts">Front Left: 0 | Front Right: 0 | Back Left: 0 | Back Right: 0</p>
+      <button class="button" onclick="resetEncoderData()">Reset Encoder Data</button>
+    </div>
+  </div>
+</div>
+
+<div id="autonomous" class="tab-content">
+  <div class="main-container">
+    <div id="camera-window">
+      <img id="camera-feed-autonomous" src="{{ url_for('video_feed') }}" alt="Camera feed" />
+    </div>
+    <div id="map"></div>
+  </div>
+  <div class="status">
+    <h3>Autonomous Mode</h3>
+    <button class="button start-button" onclick="startAutonomous()">▶️ Start Detection</button>
+    <p>Autonomous mode content goes here.</p>
+    <button class="button" onclick="emergencyStop()">Emergency Stop</button>
+    <p>Click the button to stop the rover in case of an emergency.</p>
+  </div>
+</div>
+
+<script src="/static/nipplejs.min.js"></script>
+<script src="/static/main.js"></script>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+</body>
+</html>

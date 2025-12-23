@@ -1,0 +1,7 @@
+flask
+opencv-python
+pynmea2
+# mpu6050-raspberrypi
+# RPi.GPIO
+# picamera
+# pyserial
