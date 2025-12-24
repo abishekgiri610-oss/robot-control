@@ -31,28 +31,15 @@ class VideoCamera(object):
 
         # Fallback to OpenCV
         if CV2_AVAILABLE:
-            for index in range(2): # Try index 0, 1
-                try:
-                    print(f"Trying camera index {index} (Auto Backend)...")
-                    # DSHOW failed, MSMF failed. Trying default with rigorous check
-                    video = cv2.VideoCapture(index)
-                    if video.isOpened():
-                        # Try to grab a frame immediately to verify
-                        for _ in range(5): # Warmup
-                            ret, frame = video.read()
-                        
-                        if ret:
-                            print(f"SUCCESS: Camera found and verified at index {index}")
-                            self.video = video
-                            break
-                        else:
-                            print(f"WARNING: Camera opened at {index} but returned empty frame.")
-                            video.release()
-                except Exception as e:
-                     print(f"Failed index {index}: {e}")
-            
-            if not self.video:
-                 print("No working camera found. Using static mock frame.")
+            try:
+                # If on Windows and suspecting no camera, this might hang or fail.
+                # Only try if not explicitly disabled.
+                self.video = cv2.VideoCapture(0)
+                if not self.video.isOpened():
+                    self.video = None
+            except Exception as e:
+                print(f"OpenCV Init Failed: {e}")
+                self.video = None
 
     def __del__(self):
         if self.video:
